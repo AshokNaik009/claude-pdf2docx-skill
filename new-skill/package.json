@@ -1,0 +1,17 @@
+{
+  "name": "pdf-to-docx",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "pdf-to-docx": "index.js"
+  },
+  "scripts": {
+    "run": "node index.js run",
+    "merge": "node index.js merge",
+    "all": "node index.js all"
+  },
+  "dependencies": {
+    "docx": "^9.7.1",
+    "mupdf": "^1.28.0"
+  }
+}

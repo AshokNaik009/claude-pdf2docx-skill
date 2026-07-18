@@ -6,6 +6,14 @@ Usage:
 
     --page is 1-indexed; default is all pages.
 
+Span fields: text, font, size, bold, italic, color, x, y, x1, y1,
+    block (PyMuPDF block id — group by it on multi-column pages),
+    in_table (present+true when the span lies inside a table bbox;
+    render such spans ONLY via the table, never as body text).
+Table fields: bbox, rows (null cell = merged continuation or empty —
+    infer colspan/rowspan from nulls), nested_in (index of the table
+    this one sits inside, e.g. a grid within a quadrant layout).
+
 Requires: pymupdf, pdfplumber
     pip install pymupdf pdfplumber --break-system-packages
 """
@@ -38,7 +46,7 @@ def rgb_to_hex(color):
 
 def extract_spans(page):
     spans = []
-    for block in page.get_text("dict")["blocks"]:
+    for block_id, block in enumerate(page.get_text("dict")["blocks"]):
         if block.get("type") != 0:  # 0 = text block
             continue
         for line in block["lines"]:
@@ -57,23 +65,51 @@ def extract_spans(page):
                     "y": round(s["bbox"][1]),
                     "x1": round(s["bbox"][2]),
                     "y1": round(s["bbox"][3]),
+                    # PyMuPDF block id: spans sharing a block belong together.
+                    # On multi-column pages, group by block — the flat (y, x)
+                    # sort interleaves side-by-side columns.
+                    "block": block_id,
                 })
     spans.sort(key=lambda r: (r["y"], r["x"]))
     return spans
 
 
 def extract_tables(plumber_page):
+    """null cells = merged (continuation of a rowspan/colspan) or empty."""
     tables = []
     for table in plumber_page.find_tables():
-        rows = [
-            [(cell if cell is not None else "") for cell in row]
-            for row in table.extract()
-        ]
         tables.append({
             "bbox": [round(v) for v in table.bbox],
-            "rows": rows,
+            "rows": table.extract(),
         })
+    # A table whose bbox sits inside another's is nested (e.g. a financial
+    # grid inside a quadrant-layout cell).
+    for i, t in enumerate(tables):
+        for j, outer in enumerate(tables):
+            if i == j:
+                continue
+            ob, tb = outer["bbox"], t["bbox"]
+            if (ob[0] <= tb[0] + 2 and ob[1] <= tb[1] + 2
+                    and ob[2] >= tb[2] - 2 and ob[3] >= tb[3] - 2):
+                t["nested_in"] = j
+                break
     return tables
+
+
+def tag_spans_in_tables(spans, tables):
+    """Mark spans whose center falls inside a table bbox, so the renderer
+    never emits them twice (once as body text, once via the table grid)."""
+    n = 0
+    for s in spans:
+        cx = (s["x"] + s["x1"]) / 2
+        cy = (s["y"] + s["y1"]) / 2
+        for t in tables:
+            b = t["bbox"]
+            if b[0] <= cx <= b[2] and b[1] <= cy <= b[3]:
+                s["in_table"] = True
+                n += 1
+                break
+    return n
 
 
 def extract_drawings(page):
@@ -120,6 +156,8 @@ def main():
         spans = extract_spans(page)
         tables = extract_tables(plumber.pages[i])
         drawings = extract_drawings(page)
+        in_table = tag_spans_in_tables(spans, tables)
+        nested = sum(1 for t in tables if "nested_in" in t)
         pages.append({
             "page_number": i + 1,
             "width": round(page.rect.width, 1),
@@ -129,9 +167,10 @@ def main():
             "drawings": drawings,
             "has_text": len(spans) > 0,
         })
-        print("page {}: {} spans, {} table{}, {} drawing{}{}".format(
-            i + 1, len(spans),
+        print("page {}: {} spans ({} in tables), {} table{}{}, {} drawing{}{}".format(
+            i + 1, len(spans), in_table,
             len(tables), "" if len(tables) == 1 else "s",
+            " ({} nested)".format(nested) if nested else "",
             len(drawings), "" if len(drawings) == 1 else "s",
             "" if spans else "  [NO TEXT - scanned page? needs OCR]",
         ))
