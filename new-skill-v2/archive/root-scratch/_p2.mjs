@@ -1,0 +1,23 @@
+import { writeFileSync, mkdirSync } from "node:fs";
+import { resolve } from "node:path";
+import * as docx from "docx";
+import { openPdf, renderPage } from "./src/pdf.js";
+import { generatePageCode } from "./src/worker.js";
+import { executeModule } from "./src/docx.js";
+import { CONFIG } from "./config.js";
+mkdirSync("_p2", { recursive: true });
+const d = openPdf("/Users/ashoknaik/Downloads/secondtestrrr.pdf");
+const render = renderPage(d, 1, CONFIG.dpi); // page 2
+const png = resolve("_p2/p2.png"); writeFileSync(png, render.fullPng);
+console.log("generating (reads skill)...");
+const t = Date.now();
+const code = await generatePageCode(png, { assetFiles: [], model: CONFIG.model, timeoutMs: 300000 });
+writeFileSync("_p2/p2.mjs", code);
+console.log(`generated ${code.length} chars in ${Date.now()-t}ms`);
+const { sections, styles } = await executeModule(resolve("_p2/p2.mjs"), resolve("_p2"));
+console.log("styles font:", styles?.default?.document?.run?.font);
+console.log("section count:", sections.length);
+sections.forEach((s,i)=>console.log(`  section ${i+1}: column=${JSON.stringify(s.properties?.column)} type=${s.properties?.type ?? "(default)"} children=${s.children.length}`));
+const buf = await docx.Packer.toBuffer(new docx.Document(styles?{styles,sections}:{sections}));
+writeFileSync("_p2/p2.docx", buf);
+console.log("wrote _p2/p2.docx", buf.length, "bytes");
