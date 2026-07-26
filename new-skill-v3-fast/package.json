@@ -1,0 +1,18 @@
+{
+  "name": "detfast-pdf-to-docx",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Deterministic-fast PDF → editable DOCX: PyMuPDF facts + compact-JSON model output + injected fills/borders/frame, verified without LibreOffice.",
+  "bin": {
+    "detfast": "cli.js"
+  },
+  "scripts": {
+    "run": "node cli.js run",
+    "merge": "node cli.js merge",
+    "all": "node cli.js all"
+  },
+  "dependencies": {
+    "docx": "^9.7.1",
+    "mupdf": "^1.28.0"
+  }
+}

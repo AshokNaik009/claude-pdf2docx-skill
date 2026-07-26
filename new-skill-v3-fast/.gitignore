@@ -1,0 +1,6 @@
+node_modules/
+work/
+outputs/
+*.log
+.DS_Store
+verify-report.json
