@@ -1,0 +1,31 @@
+{
+  "name": "deepagents-engine",
+  "version": "0.1.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "node scripts/fix-langgraph-sdk.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Deep-agents port of the deterministic-fast PDF → editable DOCX engine",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.2.5",
+    "@langchain/groq": "^1.3.1",
+    "@langchain/langgraph-sdk": "^1.9.28",
+    "@langchain/openai": "^1.5.6",
+    "deepagents": "^1.12.2",
+    "docx": "^9.7.1",
+    "dotenv": "^17.4.2",
+    "langchain": "^1.5.5",
+    "mupdf": "^1.28.0",
+    "zod": "^4.4.3"
+  }
+}
